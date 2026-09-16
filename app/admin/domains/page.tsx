@@ -1,0 +1,1 @@
+export default function DomainsAdmin(){return <main><h1 className="text-3xl font-black">Domains</h1><p className="mt-2 text-slate-500">Manage catalog/pricing and registrar mapping.</p></main>}

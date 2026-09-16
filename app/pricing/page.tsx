@@ -1,0 +1,1 @@
+export default function Pricing(){return <main className="container py-16"><h1 className="text-4xl font-black">Pricing</h1><p className="mt-3 text-slate-500">Plans are stored in the CMS in the next release.</p></main>}

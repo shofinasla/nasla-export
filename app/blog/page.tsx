@@ -1,0 +1,1 @@
+export default function Blog(){return <main className="container py-16"><h1 className="text-4xl font-black">Blog</h1><p className="mt-3 text-slate-500">SEO content hub powered by Supabase CMS.</p></main>}

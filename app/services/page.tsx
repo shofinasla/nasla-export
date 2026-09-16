@@ -1,0 +1,2 @@
+const services=["Company Profile Website","Website UMKM","E-Commerce","Landing Page","SEO & Digital Marketing","Custom Web Application"];
+export default function Services(){return <main className="container py-16"><h1 className="text-4xl font-black">Services</h1><div className="mt-10 grid gap-5 md:grid-cols-3">{services.map(x=><div className="card" key={x}><h2 className="font-black">{x}</h2><p className="mt-2 text-sm text-slate-500">Custom scope, quotation and order workflow.</p></div>)}</div></main>}

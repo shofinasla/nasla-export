@@ -1,0 +1,1 @@
+export default function BlogAdmin(){return <main><h1 className="text-3xl font-black">Blog CMS</h1><p className="mt-2 text-slate-500">SEO article management.</p></main>}

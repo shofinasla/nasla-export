@@ -1,0 +1,1 @@
+export default function CustomersAdmin(){return <main><h1 className="text-3xl font-black">Customers</h1><p className="mt-2 text-slate-500">Customer profiles and account history.</p></main>}

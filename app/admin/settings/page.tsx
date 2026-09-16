@@ -1,0 +1,1 @@
+export default function SettingsAdmin(){return <main><h1 className="text-3xl font-black">Settings</h1><p className="mt-2 text-slate-500">Brand, contact, SEO and integration settings.</p></main>}

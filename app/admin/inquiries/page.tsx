@@ -1,0 +1,1 @@
+export default function InquiriesAdmin(){return <main><h1 className="text-3xl font-black">Inquiries</h1><p className="mt-2 text-slate-500">Buyer and business leads.</p></main>}

@@ -1,0 +1,1 @@
+export default function Portfolio(){return <main className="container py-16"><h1 className="text-4xl font-black">Portfolio</h1><p className="mt-3 text-slate-500">Client projects and case studies will be managed through Supabase CMS.</p></main>}

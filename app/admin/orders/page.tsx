@@ -1,0 +1,1 @@
+export default function OrdersAdmin(){return <main><h1 className="text-3xl font-black">Orders</h1><p className="mt-2 text-slate-500">Manage order lifecycle and payment status.</p></main>}
