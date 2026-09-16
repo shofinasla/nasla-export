@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { AdminLayoutClient } from "@/components/admin/AdminLayoutClient";
 
 export default async function AdminLayout({
   children,
@@ -15,7 +16,7 @@ export default async function AdminLayout({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, full_name, email")
     .eq("id", data.user.id)
     .single();
 
@@ -23,5 +24,12 @@ export default async function AdminLayout({
     redirect("/account");
   }
 
-  return children;
+  const userInfo = {
+    id: data.user.id,
+    email: profile?.email || data.user.email,
+    full_name: profile?.full_name,
+    role: profile?.role,
+  };
+
+  return <AdminLayoutClient user={userInfo}>{children}</AdminLayoutClient>;
 }

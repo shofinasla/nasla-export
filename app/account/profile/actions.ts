@@ -1,9 +1,9 @@
+"use server";
+
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 export async function updateProfile(formData: FormData) {
-  "use server";
-
   const supabase = await createClient();
   const { data } = await supabase.auth.getUser();
 

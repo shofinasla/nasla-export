@@ -1,6 +1,73 @@
-import Link from "next/link"; import {notFound} from "next/navigation"; import {createClient} from "@/lib/supabase/server"; import {updateTemplate} from "../../actions";
-export const dynamic="force-dynamic";
-function list(value: unknown){return Array.isArray(value)?value.filter((x):x is string=>typeof x==="string"):[]}
-export default async function Page({params}:{params:Promise<{id:string}>}){const {id}=await params;const s=await createClient();const {data:t}=await s.from("templates").select("*").eq("id",id).single();if(!t)notFound();return <main className="max-w-3xl"><Link href="/admin/templates" className="text-sm font-bold text-slate-500">← Back</Link><h1 className="mt-4 text-3xl font-black">Edit Template</h1><p className="mt-2 text-slate-500">Kelola katalog, preview, teknologi, dan status publikasi.</p><form action={updateTemplate} className="card mt-8 grid gap-5"><input type="hidden" name="id" value={t.id}/><Field label="Name" name="name" required defaultValue={t.name}/><Field label="Slug" name="slug" required defaultValue={t.slug}/><Field label="Category" name="category" required defaultValue={t.category||""}/><div><label className="mb-2 block text-sm font-bold">Price (IDR)</label><input className="input" name="price" type="number" min="0" step="1" defaultValue={t.price}/></div><div><label className="mb-2 block text-sm font-bold">Description</label><textarea className="input min-h-36" name="description" defaultValue={t.description||""}/></div><Field label="Demo URL" name="demo_url" type="url" defaultValue={t.demo_url||""}/><Field label="Preview Image URL" name="preview_image" type="url" defaultValue={t.preview_image||""}/><Field label="Storage Path" name="storage_path" defaultValue={t.storage_path||""}/><ListField label="Screenshots (1 URL per baris)" name="screenshots" value={list(t.screenshots).join("\n")}/><ListField label="Features (1 fitur per baris)" name="features" value={list(t.features).join("\n")}/><ListField label="Technology (1 item per baris)" name="tech_stack" value={list(t.tech_stack).join("\n")}/><div className="grid gap-5 md:grid-cols-2"><Field label="Sort Order" name="sort_order" type="number" defaultValue={String(t.sort_order??0)}/><label className="flex items-center gap-3 text-sm font-bold md:mt-8"><input type="checkbox" name="is_featured" defaultChecked={t.is_featured}/> Featured</label></div><label className="flex items-center gap-3 text-sm font-bold"><input type="checkbox" name="is_published" defaultChecked={t.is_published}/> Published</label><div className="flex gap-3"><button className="btn btn-primary">Save Changes</button><Link className="btn btn-secondary" href="/admin/templates">Cancel</Link></div></form></main>}
-function Field(p:{label:string,name:string,type?:string,required?:boolean,defaultValue?:string}){return <div><label className="mb-2 block text-sm font-bold">{p.label}</label><input className="input" name={p.name} type={p.type||"text"} required={p.required} defaultValue={p.defaultValue}/></div>}
-function ListField(p:{label:string,name:string,value?:string}){return <div><label className="mb-2 block text-sm font-bold">{p.label}</label><textarea className="input min-h-28" name={p.name} defaultValue={p.value||""}/></div>}
+import React from "react";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { ArrowLeft } from "lucide-react";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { TemplateForm } from "@/components/admin/templates/TemplateForm";
+import { updateTemplate } from "../../actions";
+
+export const dynamic = "force-dynamic";
+
+function list(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((x): x is string => typeof x === "string")
+    : [];
+}
+
+export default async function EditTemplatePage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const supabase = await createClient();
+
+  const { data: template } = await supabase
+    .from("templates")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (!template) {
+    notFound();
+  }
+
+  const initialData = {
+    id: template.id,
+    name: template.name,
+    slug: template.slug,
+    category: template.category,
+    price: template.price,
+    description: template.description,
+    demo_url: template.demo_url,
+    preview_image: template.preview_image,
+    storage_path: template.storage_path,
+    screenshots: list(template.screenshots),
+    features: list(template.features),
+    tech_stack: list(template.tech_stack),
+    is_featured: template.is_featured,
+    is_published: template.is_published,
+    sort_order: template.sort_order,
+  };
+
+  return (
+    <div className="space-y-6">
+      <AdminPageHeader
+        tag="MARKETPLACE CMS"
+        title="Edit Template"
+        description={`Updating properties and catalog settings for "${template.name}".`}
+      >
+        <Link
+          href="/admin/templates"
+          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          <span>Back to Templates</span>
+        </Link>
+      </AdminPageHeader>
+
+      <TemplateForm action={updateTemplate} initialData={initialData} isEdit={true} />
+    </div>
+  );
+}
