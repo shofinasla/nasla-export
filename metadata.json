@@ -1,0 +1,6 @@
+{
+  "name": "Nasla Export",
+  "description": "Digital platform for domains, websites, templates and export business digitalization.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

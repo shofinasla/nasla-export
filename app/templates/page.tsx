@@ -47,11 +47,12 @@ export default async function TemplatesPage({
     );
   }
 
-  const { data: templates, error } = await query;
+  const { data: templatesData, error } = await query;
 
   if (error) {
-    throw new Error(error.message);
+    console.warn("Supabase templates query error:", error.message);
   }
+  const templates = error ? [] : (templatesData ?? []);
 
   const { data: categoryRows } = await supabase
     .from("templates")
