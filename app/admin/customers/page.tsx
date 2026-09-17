@@ -9,14 +9,20 @@ export default async function AdminCustomersPage() {
   const supabase = await createClient();
 
   let customers: any[] = [];
+
   try {
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, email, full_name, role, company, phone, country, address, avatar_url, created_at, updated_at")
+      .select(
+        "id, full_name, role, company, phone, country, created_at, updated_at"
+      )
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.warn("Supabase profiles query error:", error.message);
+      console.warn(
+        "Supabase profiles query error:",
+        error.message
+      );
     } else if (data) {
       customers = data;
     }
