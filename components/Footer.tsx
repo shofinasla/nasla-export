@@ -18,31 +18,34 @@ export function Footer() {
         </div>
 
         <div>
-          <div className="font-bold">Platform</div>
+          <div className="font-bold text-slate-900">Platform</div>
 
           <div className="mt-3 grid gap-2 text-sm text-slate-600">
-            <Link href="/domains">Domains</Link>
-            <Link href="/templates">Templates</Link>
-            <Link href="/services">Services</Link>
+            <Link href="/domains" className="hover:text-slate-900">Domains</Link>
+            <Link href="/templates" className="hover:text-slate-900">Templates</Link>
+            <Link href="/services" className="hover:text-slate-900">Services</Link>
+            <Link href="/pricing" className="hover:text-slate-900">Pricing</Link>
           </div>
         </div>
 
         <div>
-          <div className="font-bold">Business</div>
+          <div className="font-bold text-slate-900">Business</div>
 
           <div className="mt-3 grid gap-2 text-sm text-slate-600">
-            <Link href="/export">Export Digitalization</Link>
-            <Link href="/portfolio">Portfolio</Link>
-            <Link href="/blog">Blog</Link>
+            <Link href="/export" className="hover:text-slate-900">Export Digitalization</Link>
+            <Link href="/portfolio" className="hover:text-slate-900">Portfolio</Link>
+            <Link href="/blog" className="hover:text-slate-900">Blog</Link>
+            <Link href="/contact" className="hover:text-slate-900">Contact Us</Link>
           </div>
         </div>
 
         <div>
-          <div className="font-bold">Account</div>
+          <div className="font-bold text-slate-900">Account</div>
 
           <div className="mt-3 grid gap-2 text-sm text-slate-600">
-            <Link href="/login">Login</Link>
-            <Link href="/account">Customer Dashboard</Link>
+            <Link href="/login" className="hover:text-slate-900">Login</Link>
+            <Link href="/register" className="hover:text-slate-900">Create Account</Link>
+            <Link href="/account" className="hover:text-slate-900">Customer Dashboard</Link>
           </div>
         </div>
       </div>
