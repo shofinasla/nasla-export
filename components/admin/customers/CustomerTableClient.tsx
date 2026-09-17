@@ -19,22 +19,20 @@ import { AdminStatusBadge } from "@/components/admin/AdminStatusBadge";
 import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
 import { updateCustomerRole, updateCustomerProfile } from "@/app/admin/customers/actions";
 
-interface ProfileItem {
+export interface CustomerItem {
   id: string;
-  email?: string;
-  full_name?: string;
-  role?: string;
-  company?: string;
-  phone?: string;
-  country?: string;
-  address?: string;
-  avatar_url?: string;
+  email: string;
+  full_name?: string | null;
+  role?: string | null;
+  company?: string | null;
+  phone?: string | null;
+  country?: string | null;
   created_at: string;
-  updated_at?: string;
+  updated_at?: string | null;
 }
 
 interface CustomerTableClientProps {
-  initialCustomers: ProfileItem[];
+  initialCustomers: CustomerItem[];
 }
 
 export function CustomerTableClient({ initialCustomers }: CustomerTableClientProps) {
@@ -43,7 +41,7 @@ export function CustomerTableClient({ initialCustomers }: CustomerTableClientPro
   const [sortBy, setSortBy] = useState("date-desc");
 
   // Selected profile for viewing/editing in a slide-over modal
-  const [selectedCustomer, setSelectedCustomer] = useState<ProfileItem | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<CustomerItem | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -337,12 +335,6 @@ export function CustomerTableClient({ initialCustomers }: CustomerTableClientPro
                   </div>
 
                   <div className="flex items-center gap-2 text-slate-700">
-                    <MapPin className="h-4 w-4 text-slate-400" />
-                    <span className="font-semibold">Address:</span>
-                    <span>{selectedCustomer.address || "Not specified"}</span>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-slate-700">
                     <Calendar className="h-4 w-4 text-slate-400" />
                     <span className="font-semibold">Registered:</span>
                     <span>
@@ -437,18 +429,6 @@ export function CustomerTableClient({ initialCustomers }: CustomerTableClientPro
                       className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs font-semibold text-slate-900 focus:border-slate-400 focus:bg-white focus:outline-hidden"
                     />
                   </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700">
-                    Business Address
-                  </label>
-                  <input
-                    type="text"
-                    name="address"
-                    defaultValue={selectedCustomer.address || ""}
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs font-semibold text-slate-900 focus:border-slate-400 focus:bg-white focus:outline-hidden"
-                  />
                 </div>
 
                 <div className="mt-6 flex justify-end gap-2 border-t border-slate-100 pt-4">

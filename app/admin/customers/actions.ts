@@ -44,7 +44,6 @@ export async function updateCustomerProfile(formData: FormData) {
   const company = String(formData.get("company") || "").trim();
   const phone = String(formData.get("phone") || "").trim();
   const country = String(formData.get("country") || "").trim();
-  const address = String(formData.get("address") || "").trim();
   const role = String(formData.get("role") || "customer");
 
   if (!id) throw new Error("Customer ID required");
@@ -52,11 +51,10 @@ export async function updateCustomerProfile(formData: FormData) {
   const { error } = await supabase
     .from("profiles")
     .update({
-      full_name,
-      company,
-      phone,
-      country,
-      address,
+      full_name: full_name || null,
+      company: company || null,
+      phone: phone || null,
+      country: country || null,
       role,
       updated_at: new Date().toISOString(),
     })

@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import {
   Users,
@@ -70,7 +71,29 @@ export default async function AdminDashboardPage() {
       .select("id, full_name, company, country, role, created_at")
       .order("created_at", { ascending: false })
       .limit(5);
-    recentCustomers = custData ?? [];
+    
+    if (custData && custData.length > 0) {
+      const emailMap = new Map<string, string>();
+      if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        try {
+          const adminClient = createAdminClient();
+          const { data: authData } = await adminClient.auth.admin.listUsers({ page: 1, perPage: 100 });
+          if (authData?.users) {
+            authData.users.forEach((u) => {
+              if (u.email) emailMap.set(u.id, u.email);
+            });
+          }
+        } catch (authErr) {
+          console.warn("Dashboard auth user lookup error:", authErr);
+        }
+      }
+      recentCustomers = custData.map((c) => ({
+        ...c,
+        email: emailMap.get(c.id) || "-",
+      }));
+    } else {
+      recentCustomers = [];
+    }
 
     // 2. Templates Count
     const { data: templateData } = await supabase
