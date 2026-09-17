@@ -30,13 +30,13 @@ export default async function AdminDashboardPage() {
 
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role, full_name, email")
-    .eq("id", user.id)
-    .single();
+  const { data: profile, error: profileError } = await supabase
+  .from("profiles")
+  .select("role, full_name")
+  .eq("id", user.id)
+  .single();
 
-  if (profile?.role !== "admin") {
+  if (profileError || !profile || profile.role !== "admin") {
     redirect("/account");
   }
 
@@ -67,7 +67,7 @@ export default async function AdminDashboardPage() {
 
     const { data: custData } = await supabase
       .from("profiles")
-      .select("id, full_name, email, company, country, role, created_at")
+      .select("id, full_name, company, country, role, created_at")
       .order("created_at", { ascending: false })
       .limit(5);
     recentCustomers = custData ?? [];
