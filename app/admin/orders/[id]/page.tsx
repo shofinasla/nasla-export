@@ -7,6 +7,8 @@ import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminStatusBadge } from "@/components/admin/AdminStatusBadge";
 import { updateOrderStatus } from "@/app/admin/orders/actions";
 import { formatIDR, getOrderStatusConfig } from "@/lib/orders";
+import { getPaymentsForOrder } from "@/lib/payments/service";
+import { PAYMENT_STATUS_CONFIG, PaymentStatus } from "@/lib/payments/types";
 import {
   ArrowLeft,
   Calendar,
@@ -21,6 +23,12 @@ import {
   FileText,
   Save,
   Package,
+  Layers,
+  ShieldCheck,
+  QrCode,
+  Building2,
+  Wallet,
+  Send,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -70,6 +78,7 @@ export default async function AdminOrderDetailPage({
       total,
       currency,
       payment_method,
+      payment_provider,
       payment_reference,
       notes,
       created_at,
@@ -116,11 +125,29 @@ export default async function AdminOrderDetailPage({
     }
   }
 
+  // 4. Fetch Payment Records for this order
+  const payments = await getPaymentsForOrder(order.id);
+
   const custProfile = Array.isArray(order.customer)
     ? order.customer[0]
     : order.customer;
   const items = (order.items as any[]) || [];
   const statusConfig = getOrderStatusConfig(order.status);
+
+  const getMethodIcon = (method?: string) => {
+    switch (method) {
+      case "qris":
+        return <QrCode className="h-4 w-4" />;
+      case "virtual_account":
+        return <Building2 className="h-4 w-4" />;
+      case "ewallet":
+        return <Wallet className="h-4 w-4" />;
+      case "bank_transfer":
+        return <Send className="h-4 w-4" />;
+      default:
+        return <CreditCard className="h-4 w-4" />;
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -143,13 +170,13 @@ export default async function AdminOrderDetailPage({
       </div>
 
       <AdminPageHeader
-        tag="TRANSACTION DETAILS"
+        tag="TRANSACTION & PAYMENT DETAILS"
         title={`Order ${order.order_number}`}
-        description={`Detail lengkap transaksi dan status pemrosesan untuk pesanan ${order.order_number}.`}
+        description={`Detail lengkap pesanan, riwayat pembayaran gateway, dan status pemenuhan layanan.`}
       />
 
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-        {/* Left Column: Order Items & Pricing Details */}
+        {/* Left Column: Order Items, Pricing Details & Payments History */}
         <div className="space-y-6">
           {/* Items Table Card */}
           <div className="rounded-3xl border border-slate-200/90 bg-white p-6 shadow-xs">
@@ -223,10 +250,106 @@ export default async function AdminOrderDetailPage({
                     </span>
                   </div>
                   <p className="mt-1 text-[10px] text-slate-400 text-right">
-                    Mata uang: {order.currency || "IDR"}
+                    Mata uang penyelesaian: {order.currency || "IDR"}
                   </p>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Payment Attempts History Card */}
+          <div className="rounded-3xl border border-slate-200/90 bg-white p-6 shadow-xs">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-2">
+                <CreditCard className="h-4 w-4 text-indigo-600" />
+                <h2 className="text-sm font-bold text-slate-900">
+                  Riwayat Pembayaran & Transaksi ({payments.length})
+                </h2>
+              </div>
+              <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">
+                Multi-Provider Ready
+              </span>
+            </div>
+
+            <div className="mt-4">
+              {payments.length > 0 ? (
+                <div className="divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-100">
+                  {payments.map((p) => {
+                    const pStatus =
+                      PAYMENT_STATUS_CONFIG[p.status as PaymentStatus] ||
+                      PAYMENT_STATUS_CONFIG.pending;
+                    return (
+                      <div
+                        key={p.id}
+                        className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between hover:bg-slate-50/50"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700">
+                            {getMethodIcon(p.payment_method)}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-slate-900 capitalize">
+                                {p.payment_method?.replace("_", " ")}
+                              </span>
+                              <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-slate-600">
+                                {p.provider}
+                              </span>
+                              {p.payment_channel && (
+                                <span className="text-[10px] font-mono text-slate-400">
+                                  ({p.payment_channel})
+                                </span>
+                              )}
+                            </div>
+                            <p className="mt-0.5 text-[11px] text-slate-400">
+                              Ref:{" "}
+                              <span className="font-mono text-slate-600">
+                                {p.provider_payment_id || p.provider_reference || "-"}
+                              </span>
+                            </p>
+                            <p className="text-[10px] text-slate-400">
+                              Dibuat: {new Date(p.created_at).toLocaleString("id-ID")}
+                              {p.paid_at && ` • Lunas: ${new Date(p.paid_at).toLocaleString("id-ID")}`}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 sm:text-right">
+                          <div>
+                            <p className="text-xs font-bold text-slate-900">
+                              {formatIDR(p.amount)}
+                            </p>
+                            <span
+                              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold capitalize ${
+                                pStatus.variant === "success"
+                                  ? "bg-emerald-50 text-emerald-700"
+                                  : pStatus.variant === "danger"
+                                  ? "bg-rose-50 text-rose-700"
+                                  : "bg-amber-50 text-amber-700"
+                              }`}
+                            >
+                              <span
+                                className={`h-1.5 w-1.5 rounded-full ${
+                                  pStatus.variant === "success"
+                                    ? "bg-emerald-500"
+                                    : pStatus.variant === "danger"
+                                    ? "bg-rose-500"
+                                    : "bg-amber-500"
+                                }`}
+                              />
+                              {pStatus.label}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-xs text-slate-400">
+                  Belum ada catatan transaksi pembayaran terinisiasi untuk pesanan ini.
+                </div>
+              )}
             </div>
           </div>
 
@@ -292,15 +415,15 @@ export default async function AdminOrderDetailPage({
 
               <div>
                 <label className="block text-xs font-bold text-slate-700">
-                  Status Operasional
+                  Status Operasional (Fulfillment)
                 </label>
                 <select
                   name="status"
                   defaultValue={order.status}
                   className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-xs font-semibold text-slate-900 focus:border-slate-400 focus:bg-white focus:outline-hidden"
                 >
-                  <option value="pending">Pending (Menunggu Pembayaran)</option>
-                  <option value="awaiting_payment">Awaiting Payment</option>
+                  <option value="pending">Pending (Menunggu Konfirmasi)</option>
+                  <option value="awaiting_payment">Awaiting Payment (Menunggu Pembayaran)</option>
                   <option value="paid">Paid (Pembayaran Terverifikasi)</option>
                   <option value="processing">Processing (Sedang Disiapkan)</option>
                   <option value="completed">Completed (Selesai / Terpenuhi)</option>
@@ -352,9 +475,15 @@ export default async function AdminOrderDetailPage({
                 </span>
               </div>
               <div className="flex justify-between">
+                <span className="text-slate-400">Provider:</span>
+                <span className="font-medium capitalize">
+                  {order.payment_provider || "Multi-Provider"}
+                </span>
+              </div>
+              <div className="flex justify-between">
                 <span className="text-slate-400">Metode Bayar:</span>
-                <span className="font-medium">
-                  {order.payment_method || "Pending (Manual / Stage 5 Gateway)"}
+                <span className="font-medium capitalize">
+                  {order.payment_method?.replace("_", " ") || "Pilih Saat Bayar"}
                 </span>
               </div>
               {order.payment_reference && (

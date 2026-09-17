@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { generateOrderNumber } from "@/lib/orders";
+import { initiatePaymentForOrder } from "@/lib/payments/service";
+import { PaymentMethodCategory } from "@/lib/payments/types";
 
 export async function createTemplateOrder(formData: FormData) {
   const supabase = await createClient();
@@ -14,13 +16,15 @@ export async function createTemplateOrder(formData: FormData) {
     error: authError,
   } = await supabase.auth.getUser();
 
+  const templateSlug = formData.get("template_slug")?.toString().trim();
+  const paymentMethod = (formData.get("payment_method")?.toString().trim() || "qris") as PaymentMethodCategory;
+  const paymentChannel = formData.get("payment_channel")?.toString().trim() || null;
+  const notes = formData.get("notes")?.toString().trim() || null;
+
   if (authError || !user) {
-    const slug = formData.get("template_slug")?.toString() || "";
+    const slug = templateSlug || "";
     redirect(`/login?redirect=${encodeURIComponent(`/checkout?template=${slug}`)}`);
   }
-
-  const templateSlug = formData.get("template_slug")?.toString().trim();
-  const notes = formData.get("notes")?.toString().trim() || null;
 
   if (!templateSlug) {
     throw new Error("Template is required to create an order.");
@@ -72,6 +76,7 @@ export async function createTemplateOrder(formData: FormData) {
       discount,
       total,
       currency: "IDR",
+      payment_method: paymentMethod,
       notes,
     })
     .select("id, order_number")
@@ -106,10 +111,48 @@ export async function createTemplateOrder(formData: FormData) {
     throw new Error(itemError?.message || "Failed to record order items.");
   }
 
+  // 7. Initiate Payment attempt through Payment Core Service
+  let paymentResult = null;
+  try {
+    paymentResult = await initiatePaymentForOrder({
+      orderNumber: order.order_number,
+      paymentMethod,
+      paymentChannel,
+    });
+  } catch (paymentErr: any) {
+    console.warn("Payment initiation note:", paymentErr?.message);
+  }
+
   revalidatePath("/account/orders");
   revalidatePath("/account");
   revalidatePath("/admin/orders");
   revalidatePath("/admin");
 
+  // If gateway returned an active payment URL (and not just internal fallback), redirect or send to order details
   redirect(`/account/orders/${order.order_number}?success=1`);
+}
+
+/**
+ * Server action to initiate or retry payment for an existing unpaid order
+ */
+export async function retryOrderPaymentAction(formData: FormData) {
+  const orderNumber = formData.get("order_number")?.toString().trim();
+  const paymentMethod = (formData.get("payment_method")?.toString().trim() || "qris") as PaymentMethodCategory;
+  const paymentChannel = formData.get("payment_channel")?.toString().trim() || null;
+
+  if (!orderNumber) {
+    throw new Error("Nomor pesanan tidak valid.");
+  }
+
+  await initiatePaymentForOrder({
+    orderNumber,
+    paymentMethod,
+    paymentChannel,
+  });
+
+  revalidatePath(`/account/orders/${orderNumber}`);
+  revalidatePath("/account/orders");
+  revalidatePath("/admin/orders");
+
+  redirect(`/account/orders/${orderNumber}?pay_initiated=1`);
 }

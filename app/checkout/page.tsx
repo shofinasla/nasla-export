@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatIDR } from "@/lib/orders";
 import { createTemplateOrder } from "./actions";
+import { PaymentMethodSelector } from "@/components/checkout/PaymentMethodSelector";
 import {
   ShieldCheck,
   LayoutTemplate,
@@ -12,10 +13,9 @@ import {
   Mail,
   Building,
   Phone,
-  CheckCircle2,
   AlertCircle,
-  HelpCircle,
-  Clock,
+  CreditCard,
+  Lock,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -104,17 +104,17 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
       </div>
 
       <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr]">
-        {/* Left Column: Order Items & Customer Details */}
+        {/* Left Column: Order Items, Customer Info & Payment Method Selection */}
         <div className="space-y-6">
           <div>
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Transaction Foundation
+              Multi-Provider Payment Core
             </span>
             <h1 className="mt-1 text-2xl font-black text-slate-900 sm:text-3xl">
-              Konfirmasi Pesanan
+              Pembayaran & Checkout
             </h1>
             <p className="mt-1 text-sm text-slate-500">
-              Periksa detail template dan informasi akun Anda sebelum membuat pesanan.
+              Pilih metode pembayaran yang Anda inginkan dan periksa detail pesanan Anda.
             </p>
           </div>
 
@@ -232,7 +232,7 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
           </div>
         </div>
 
-        {/* Right Column: Price Summary & Checkout Action Form */}
+        {/* Right Column: Payment Method Selection & Checkout Form */}
         <div className="space-y-6">
           <form
             action={createTemplateOrder}
@@ -265,9 +265,22 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
                   </span>
                 </div>
                 <p className="mt-1 text-[11px] text-slate-400">
-                  Mata uang: IDR (Rupiah Indonesia)
+                  Mata uang penyelesaian: IDR (Rupiah Indonesia)
                 </p>
               </div>
+            </div>
+
+            {/* Payment Method Selector */}
+            <div className="mt-6 border-t border-slate-100 pt-5">
+              <label className="mb-2.5 flex items-center justify-between text-xs font-bold text-slate-900">
+                <span className="flex items-center gap-1.5">
+                  <CreditCard className="h-3.5 w-3.5 text-indigo-600" />
+                  Pilih Metode Pembayaran
+                </span>
+                <span className="text-[10px] text-slate-400">Otomatis / Real-Time</span>
+              </label>
+
+              <PaymentMethodSelector defaultMethod="qris" />
             </div>
 
             {/* Order Notes Field */}
@@ -281,20 +294,10 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
               <textarea
                 id="order-notes"
                 name="notes"
-                rows={3}
-                placeholder="Tuliskan catatan khusus atau preferensi setup jika ada..."
+                rows={2}
+                placeholder="Tuliskan catatan khusus jika ada..."
                 className="mt-1.5 w-full rounded-2xl border border-slate-200 bg-slate-50/50 p-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:bg-white focus:outline-hidden"
               />
-            </div>
-
-            {/* Stage 4 Notice */}
-            <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50/60 p-3.5 text-xs text-blue-900">
-              <div className="flex items-start gap-2">
-                <Clock className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
-                <p className="leading-relaxed">
-                  <strong>Status Pesanan:</strong> Setelah konfirmasi, pesanan akan berstatus <em>Pending</em> dan tersimpan di Dashboard Akun Anda. Integrasi gateway pembayaran online akan dihubungkan di tahap selanjutnya.
-                </p>
-              </div>
             </div>
 
             {/* Submit CTA */}
@@ -303,21 +306,21 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
               id="confirm-order-button"
               className="btn btn-primary mt-6 w-full py-3.5 text-sm font-black shadow-md transition-all hover:shadow-lg"
             >
-              <span>Konfirmasi & Buat Pesanan</span>
+              <span>Bayar Sekarang (Pay Now)</span>
               <ArrowRight className="h-4 w-4" />
             </button>
 
             <div className="mt-4 flex items-center justify-center gap-1.5 text-center text-[11px] font-semibold text-slate-400">
-              <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-              <span>Transaksi Aman • Server Authorized</span>
+              <Lock className="h-3.5 w-3.5 text-emerald-500" />
+              <span>Pembayaran Aman & Terenkripsi • Provider Agnostic</span>
             </div>
           </form>
 
           {/* Support Guarantee Card */}
           <div className="rounded-3xl border border-slate-100 bg-slate-50 p-5 text-xs text-slate-600">
-            <h4 className="font-bold text-slate-900">Butuh Bantuan?</h4>
+            <h4 className="font-bold text-slate-900">Butuh Bantuan Transaksi?</h4>
             <p className="mt-1 text-slate-500">
-              Tim support Nasla Export siap membantu konsultasi teknis maupun kustomisasi template sesuai identitas ekspor Anda.
+              Tim finance Nasla Export siap membantu proses faktur perusahaan, PPh/PPN, maupun pembayaran lintas negara.
             </p>
             <Link
               href="/contact"

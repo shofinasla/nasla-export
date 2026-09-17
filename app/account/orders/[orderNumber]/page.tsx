@@ -3,20 +3,15 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatIDR, getOrderStatusConfig } from "@/lib/orders";
+import { OrderPaymentSection } from "@/components/customer/OrderPaymentSection";
+import { getPaymentsForOrder } from "@/lib/payments/service";
 import {
-  Package,
   Calendar,
   User,
-  Mail,
-  Building,
-  Phone,
-  FileText,
   Clock,
   ArrowLeft,
   CheckCircle2,
-  AlertCircle,
   ShieldCheck,
-  ShoppingBag,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +22,7 @@ interface CustomerOrderDetailPageProps {
   }>;
   searchParams: Promise<{
     success?: string;
+    pay_initiated?: string;
   }>;
 }
 
@@ -35,7 +31,7 @@ export default async function CustomerOrderDetailPage({
   searchParams,
 }: CustomerOrderDetailPageProps) {
   const { orderNumber } = await params;
-  const { success } = await searchParams;
+  const { success, pay_initiated } = await searchParams;
   const supabase = await createClient();
 
   // 1. Authenticate user
@@ -62,6 +58,7 @@ export default async function CustomerOrderDetailPage({
       currency,
       notes,
       payment_method,
+      payment_provider,
       payment_reference,
       created_at,
       updated_at,
@@ -86,7 +83,6 @@ export default async function CustomerOrderDetailPage({
 
   // 3. Strict security check: Ensure order belongs to the logged-in user
   if (order.customer_id !== user.id) {
-    // Check if user is admin (admins can view via /admin/orders/[id], but if checking here):
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")
@@ -104,6 +100,9 @@ export default async function CustomerOrderDetailPage({
     .select("full_name, company, phone, country")
     .eq("id", order.customer_id)
     .single();
+
+  // 5. Fetch payment records
+  const payments = await getPaymentsForOrder(order.id);
 
   const statusConfig = getOrderStatusConfig(order.status);
   const items = (order.order_items as any[]) || [];
@@ -134,7 +133,21 @@ export default async function CustomerOrderDetailPage({
               Pesanan Berhasil Dibuat!
             </h3>
             <p className="mt-0.5 text-xs text-emerald-700">
-              Pesanan Anda dengan nomor <strong>{order.order_number}</strong> telah tersimpan dalam sistem kami.
+              Pesanan Anda dengan nomor <strong>{order.order_number}</strong> telah tersimpan dalam sistem. Silakan selesaikan pembayaran melalui modul di bawah ini.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {pay_initiated && (
+        <div className="flex items-start gap-3 rounded-2xl border border-blue-200 bg-blue-50/80 p-4 text-blue-900">
+          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
+          <div>
+            <h3 className="text-sm font-bold text-blue-900">
+              Sesi Pembayaran Baru Berhasil Diinisiasi
+            </h3>
+            <p className="mt-0.5 text-xs text-blue-700">
+              Instruksi dan saluran pembayaran baru telah disiapkan. Silakan lanjutkan transaksi.
             </p>
           </div>
         </div>
@@ -153,7 +166,7 @@ export default async function CustomerOrderDetailPage({
             <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-slate-500">
               <span className="flex items-center gap-1.5">
                 <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                Dibuat pada:{" "}
+                Dibuat:{" "}
                 {new Date(order.created_at).toLocaleDateString("id-ID", {
                   day: "numeric",
                   month: "long",
@@ -167,7 +180,7 @@ export default async function CustomerOrderDetailPage({
 
           <div className="sm:text-right">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Status Pesanan
+              Status Pesanan (Fulfillment)
             </span>
             <div className="mt-1">
               <span
@@ -205,7 +218,7 @@ export default async function CustomerOrderDetailPage({
           </div>
         </div>
 
-        {/* Customer Details & Order Items Grid */}
+        {/* Customer Details & Transaction Info Grid */}
         <div className="mt-6 grid gap-6 md:grid-cols-2">
           {/* Customer Info */}
           <div className="rounded-2xl bg-slate-50/70 p-5">
@@ -247,15 +260,21 @@ export default async function CustomerOrderDetailPage({
             </h3>
             <div className="mt-3 space-y-2 text-xs">
               <div className="flex justify-between">
-                <span className="text-slate-400">Mata Uang:</span>
+                <span className="text-slate-400">Mata Uang Dasar:</span>
                 <span className="font-semibold text-slate-800">
                   {order.currency || "IDR"}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Metode Pembayaran:</span>
-                <span className="font-semibold text-slate-800">
-                  {order.payment_method || "Menunggu Integrasi Gateway"}
+                <span className="text-slate-400">Provider Aktif:</span>
+                <span className="font-semibold capitalize text-slate-800">
+                  {order.payment_provider || "Multi-Provider Ready"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Metode Dipilih:</span>
+                <span className="font-semibold capitalize text-slate-800">
+                  {order.payment_method?.replace("_", " ") || "Pilih Saat Pembayaran"}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -333,7 +352,7 @@ export default async function CustomerOrderDetailPage({
             </div>
             <div className="border-t border-slate-100 pt-2">
               <div className="flex items-baseline justify-between">
-                <span className="text-sm font-bold text-slate-900">Total</span>
+                <span className="text-sm font-bold text-slate-900">Total Tagihan</span>
                 <span className="text-xl font-black text-slate-900">
                   {formatIDR(order.total)}
                 </span>
@@ -351,22 +370,15 @@ export default async function CustomerOrderDetailPage({
             </p>
           </div>
         )}
-
-        {/* Stage 4 Information Notice */}
-        <div className="mt-8 rounded-2xl border border-blue-100 bg-blue-50/50 p-4 text-xs text-blue-900">
-          <div className="flex items-start gap-2.5">
-            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
-            <div>
-              <h4 className="font-bold text-blue-900">
-                Informasi Pemrosesan Transaksi (Stage 4)
-              </h4>
-              <p className="mt-1 leading-relaxed text-blue-800">
-                Pesanan ini telah tercatat secara resmi di database transaksi Nasla Export. Integrasi kanal pembayaran digital (Payment Gateway / Bank Transfer) akan diaktifkan pada modul Commerce (Stage 5).
-              </p>
-            </div>
-          </div>
-        </div>
       </div>
+
+      {/* Payment Processing Section (Customer Interactive) */}
+      <OrderPaymentSection
+        orderNumber={order.order_number}
+        orderTotal={Number(order.total)}
+        orderStatus={order.status}
+        payments={payments}
+      />
     </div>
   );
 }

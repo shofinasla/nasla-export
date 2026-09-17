@@ -31,6 +31,27 @@ export interface OrderItem {
   created_at?: string;
 }
 
+export interface PaymentRecord {
+  id: string;
+  order_id: string;
+  provider: string;
+  provider_payment_id?: string | null;
+  provider_reference?: string | null;
+  payment_method: string;
+  payment_channel?: string | null;
+  amount: number;
+  currency: string;
+  status: "pending" | "processing" | "paid" | "failed" | "expired" | "cancelled" | "refunded";
+  payment_url?: string | null;
+  expires_at?: string | null;
+  paid_at?: string | null;
+  failed_at?: string | null;
+  refunded_at?: string | null;
+  metadata?: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Order {
   id: string;
   customer_id: string;
@@ -54,4 +75,5 @@ export interface Order {
     country?: string | null;
   } | null;
   items?: OrderItem[];
+  payments?: PaymentRecord[];
 }
