@@ -331,33 +331,34 @@ export default async function AdminDashboardPage() {
             <div className="mt-4 divide-y divide-slate-100">
               {recentOrders.length > 0 ? (
                 recentOrders.map((order) => (
-                  <div
-                    key={order.id}
-                    className="flex items-center justify-between py-3 text-xs"
-                  >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-900">
-                          #{order.order_number || order.id.slice(0, 8)}
-                        </span>
-                        <AdminStatusBadge status={order.status} />
+                    <Link
+                      href={`/admin/orders/${order.id}`}
+                      key={order.id}
+                      className="group flex items-center justify-between py-3 text-xs hover:bg-slate-50/60 rounded-xl px-2 -mx-2 transition"
+                    >
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-slate-900 group-hover:text-indigo-600 font-mono">
+                            {order.order_number || `#${order.id.slice(0, 8)}`}
+                          </span>
+                          <AdminStatusBadge status={order.status} />
+                        </div>
+                        <p className="mt-1 text-[11px] text-slate-400">
+                          {order.created_at
+                            ? new Date(order.created_at).toLocaleDateString("id-ID", {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              })
+                            : "-"}
+                        </p>
                       </div>
-                      <p className="mt-1 text-[11px] text-slate-400">
-                        {order.created_at
-                          ? new Date(order.created_at).toLocaleDateString("id-ID", {
-                              day: "numeric",
-                              month: "short",
-                              year: "numeric",
-                            })
-                          : "-"}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-slate-900">
-                        Rp {Number(order.total || 0).toLocaleString("id-ID")}
-                      </p>
-                    </div>
-                  </div>
+                      <div className="text-right">
+                        <p className="font-bold text-slate-900">
+                          Rp {Number(order.total || 0).toLocaleString("id-ID")}
+                        </p>
+                      </div>
+                    </Link>
                 ))
               ) : (
                 <div className="py-8 text-center text-xs text-slate-400">

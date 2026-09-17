@@ -17,7 +17,7 @@ export default async function AccountLayout({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name,email,role")
+    .select("full_name,role")
     .eq("id", data.user.id)
     .single();
 
@@ -33,10 +33,25 @@ export default async function AccountLayout({
             My Account
           </p>
           <nav className="mt-2 grid gap-1">
-            <Link href="/account" className="rounded-xl px-3 py-2 text-sm font-semibold hover:bg-slate-50">
+            <Link
+              href="/account"
+              id="account-nav-dashboard"
+              className="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+            >
               Dashboard
             </Link>
-            <Link href="/account/profile" className="rounded-xl px-3 py-2 text-sm font-semibold hover:bg-slate-50">
+            <Link
+              href="/account/orders"
+              id="account-nav-orders"
+              className="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+            >
+              Orders
+            </Link>
+            <Link
+              href="/account/profile"
+              id="account-nav-profile"
+              className="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+            >
               Profile
             </Link>
           </nav>

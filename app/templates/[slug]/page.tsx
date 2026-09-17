@@ -43,10 +43,33 @@ export default async function TemplateDetailPage({ params }: { params: Promise<{
             <p className="mt-1 text-3xl font-black">Rp {Number(template.price).toLocaleString("id-ID")}</p>
           </div>
           <div className="mt-7 grid gap-3">
-            {template.demo_url && <a className="btn btn-secondary" href={template.demo_url} target="_blank" rel="noreferrer">Live Demo ↗</a>}
-            <Link className="btn btn-primary" href={`/contact?template=${encodeURIComponent(template.slug)}`}>Request / Buy Template</Link>
+            <Link
+              id="order-template-cta"
+              className="btn btn-primary"
+              href={`/checkout?template=${encodeURIComponent(template.slug)}`}
+            >
+              Order Template
+            </Link>
+            {template.demo_url && (
+              <a
+                className="btn btn-secondary"
+                href={template.demo_url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Live Demo ↗
+              </a>
+            )}
+            <Link
+              className="text-center text-xs font-semibold text-slate-500 hover:text-slate-800"
+              href={`/contact?template=${encodeURIComponent(template.slug)}`}
+            >
+              Konsultasi Kustomisasi Template →
+            </Link>
           </div>
-          <p className="mt-4 text-xs leading-5 text-slate-400">Pembelian dan pembayaran akan diaktifkan pada tahap commerce. Untuk sekarang, gunakan Request / Buy untuk inquiry.</p>
+          <p className="mt-4 text-xs leading-5 text-slate-400">
+            Transaksi instan dan aman. Pesanan akan otomatis tercatat di dashboard akun Anda.
+          </p>
         </aside>
       </div>
 

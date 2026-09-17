@@ -43,5 +43,8 @@ export async function updateOrderStatus(formData: FormData) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/admin/orders");
+  revalidatePath(`/admin/orders/${id}`);
   revalidatePath("/admin");
+  revalidatePath("/account/orders");
+  revalidatePath("/account");
 }

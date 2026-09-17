@@ -21,6 +21,7 @@ import {
   Layers,
   ChevronRight,
   ExternalLink,
+  Package,
 } from "lucide-react";
 
 interface UserProfile {
@@ -316,6 +317,15 @@ export function Header() {
                     </Link>
 
                     <Link
+                      href="/account/orders"
+                      id="dropdown-link-orders"
+                      className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900"
+                    >
+                      <Package className="h-4 w-4 text-slate-600" />
+                      <span>My Orders</span>
+                    </Link>
+
+                    <Link
                       href="/account/profile"
                       id="dropdown-link-profile"
                       className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900"
@@ -406,17 +416,24 @@ export function Header() {
                   </span>
                 </div>
 
-                <div className="mt-3 grid grid-cols-2 gap-2 border-t border-slate-200/60 pt-3">
+                <div className="mt-3 grid grid-cols-3 gap-2 border-t border-slate-200/60 pt-3">
                   <Link
                     href="/account"
-                    className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white py-2 text-xs font-bold text-slate-800 hover:bg-slate-50"
+                    className="flex items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white py-2 text-xs font-bold text-slate-800 hover:bg-slate-50"
                   >
                     <User className="h-3.5 w-3.5" />
                     <span>Dashboard</span>
                   </Link>
                   <Link
+                    href="/account/orders"
+                    className="flex items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white py-2 text-xs font-bold text-slate-800 hover:bg-slate-50"
+                  >
+                    <Package className="h-3.5 w-3.5" />
+                    <span>Orders</span>
+                  </Link>
+                  <Link
                     href="/account/profile"
-                    className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white py-2 text-xs font-bold text-slate-800 hover:bg-slate-50"
+                    className="flex items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white py-2 text-xs font-bold text-slate-800 hover:bg-slate-50"
                   >
                     <span>Profile</span>
                   </Link>

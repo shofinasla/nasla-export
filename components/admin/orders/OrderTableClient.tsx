@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import Link from "next/link";
 import {
   Search,
   ShoppingCart,
@@ -16,41 +17,47 @@ import {
   X,
   Edit2,
   Package,
+  ExternalLink,
 } from "lucide-react";
 import { AdminStatusBadge } from "@/components/admin/AdminStatusBadge";
 import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
 import { updateOrderStatus } from "@/app/admin/orders/actions";
+import { formatIDR, getOrderStatusConfig } from "@/lib/orders";
 
-interface OrderItem {
+export interface AdminOrderItem {
   id: string;
   order_number: string;
   customer_id?: string;
   customer?: {
-    full_name?: string;
-    email?: string;
-    company?: string;
+    full_name?: string | null;
+    email?: string | null;
+    company?: string | null;
+    phone?: string | null;
+    country?: string | null;
   } | null;
   status: string;
-  subtotal?: number;
-  tax?: number;
+  subtotal: number;
+  discount: number;
   total: number;
-  currency?: string;
-  payment_method?: string;
-  payment_reference?: string;
-  notes?: string;
+  currency: string;
+  payment_method?: string | null;
+  payment_reference?: string | null;
+  notes?: string | null;
   created_at: string;
-  updated_at?: string;
+  updated_at?: string | null;
   items?: {
     id: string;
     item_type: string;
-    title: string;
-    price: number;
+    name: string;
+    slug?: string | null;
+    unit_price: number;
+    total_price: number;
     quantity: number;
   }[];
 }
 
 interface OrderTableClientProps {
-  initialOrders: OrderItem[];
+  initialOrders: AdminOrderItem[];
 }
 
 export function OrderTableClient({ initialOrders }: OrderTableClientProps) {
@@ -58,22 +65,25 @@ export function OrderTableClient({ initialOrders }: OrderTableClientProps) {
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [sortBy, setSortBy] = useState("date-desc");
 
-  // Order Detail / Status Modal
-  const [selectedOrder, setSelectedOrder] = useState<OrderItem | null>(null);
+  // Order Detail / Quick Status Modal
+  const [selectedOrder, setSelectedOrder] = useState<AdminOrderItem | null>(
+    null
+  );
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // Metrics
+  // Metrics calculation
   const metrics = useMemo(() => {
     const total = initialOrders.length;
-    const pending = initialOrders.filter((o) => o.status === "pending").length;
-    const paid = initialOrders.filter(
+    const pending = initialOrders.filter((o) => o.status === "pending" || o.status === "awaiting_payment").length;
+    const processing = initialOrders.filter((o) => o.status === "processing").length;
+    const completed = initialOrders.filter(
       (o) => o.status === "paid" || o.status === "completed"
     ).length;
-    const grossRevenue = initialOrders
-      .filter((o) => o.status === "paid" || o.status === "completed")
+    const grossVolume = initialOrders
+      .filter((o) => o.status !== "cancelled" && o.status !== "refunded")
       .reduce((sum, o) => sum + (Number(o.total) || 0), 0);
 
-    return { total, pending, paid, grossRevenue };
+    return { total, pending, processing, completed, grossVolume };
   }, [initialOrders]);
 
   const filteredOrders = useMemo(() => {
@@ -142,325 +152,296 @@ export function OrderTableClient({ initialOrders }: OrderTableClientProps) {
           <p className="mt-2 text-2xl font-black text-slate-900">
             {metrics.total}
           </p>
-          <p className="mt-1 text-xs text-slate-500">All customer checkouts</p>
+          <p className="mt-1 text-xs text-slate-500">Semua pesanan terdaftar</p>
         </div>
 
         <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-            Pending Payment
+            Pending / Awaiting
           </span>
           <p className="mt-2 text-2xl font-black text-amber-600">
             {metrics.pending}
           </p>
-          <p className="mt-1 text-xs text-slate-500">Awaiting invoice settlement</p>
+          <p className="mt-1 text-xs text-slate-500">Menunggu tindakan</p>
         </div>
 
         <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-            Settled / Paid
+            Processing / Active
+          </span>
+          <p className="mt-2 text-2xl font-black text-blue-600">
+            {metrics.processing}
+          </p>
+          <p className="mt-1 text-xs text-slate-500">Sedang disiapkan</p>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs">
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+            Total Volume Transaksi
           </span>
           <p className="mt-2 text-2xl font-black text-emerald-600">
-            {metrics.paid}
+            {formatIDR(metrics.grossVolume)}
           </p>
-          <p className="mt-1 text-xs text-slate-500">Completed transactions</p>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-            Gross Revenue
-          </span>
-          <p className="mt-2 text-2xl font-black text-slate-900">
-            Rp {metrics.grossRevenue.toLocaleString("id-ID")}
+          <p className="mt-1 text-xs text-slate-500">
+            {metrics.completed} pesanan sukses
           </p>
-          <p className="mt-1 text-xs text-slate-500">Total settled platform value</p>
         </div>
       </div>
 
-      {/* Toolbar */}
-      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200/90 bg-white p-4 shadow-xs md:flex-row md:items-center md:justify-between">
+      {/* Filter & Search Bar */}
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200/90 bg-white p-4 shadow-xs sm:flex-row sm:items-center sm:justify-between">
         <div className="relative flex-1">
-          <Search className="absolute top-3 left-3 h-4 w-4 text-slate-400" />
+          <Search className="absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
-            placeholder="Search by order #, customer name, email..."
+            placeholder="Cari order #, nama customer, email, payment ref..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-xl border border-slate-200/90 bg-slate-50/50 py-2.5 pr-4 pl-9 text-xs text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:bg-white focus:outline-hidden"
+            className="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-2.5 pr-4 pl-10 text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:bg-white focus:outline-hidden"
           />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className="absolute top-2.5 right-3 text-xs text-slate-400 hover:text-slate-600"
-            >
-              Clear
-            </button>
-          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* Status Filter */}
           <select
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
-            className="rounded-xl border border-slate-200/90 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 focus:outline-hidden"
+            className="rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-xs font-semibold text-slate-700 focus:border-slate-400 focus:bg-white focus:outline-hidden"
           >
-            <option value="all">All Status</option>
+            <option value="all">Semua Status</option>
             <option value="pending">Pending</option>
+            <option value="awaiting_payment">Awaiting Payment</option>
             <option value="paid">Paid</option>
             <option value="processing">Processing</option>
             <option value="completed">Completed</option>
             <option value="cancelled">Cancelled</option>
+            <option value="refunded">Refunded</option>
           </select>
 
-          {/* Sort By */}
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="rounded-xl border border-slate-200/90 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 focus:outline-hidden"
+            className="rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-xs font-semibold text-slate-700 focus:border-slate-400 focus:bg-white focus:outline-hidden"
           >
-            <option value="date-desc">Newest First</option>
-            <option value="date-asc">Oldest First</option>
-            <option value="total-desc">Total (High to Low)</option>
-            <option value="total-asc">Total (Low to High)</option>
+            <option value="date-desc">Terbaru</option>
+            <option value="date-asc">Terlama</option>
+            <option value="total-desc">Nominal Tertinggi</option>
+            <option value="total-asc">Nominal Terendah</option>
           </select>
         </div>
       </div>
 
-      {/* Orders Table or Empty State */}
-      {filteredOrders.length > 0 ? (
+      {/* Orders Table */}
+      {filteredOrders.length === 0 ? (
+        <AdminEmptyState
+          icon={<ShoppingCart className="h-6 w-6 stroke-[1.75]" />}
+          title="Tidak Ada Pesanan"
+          description={
+            searchQuery || selectedStatus !== "all"
+              ? "Tidak ada pesanan yang sesuai dengan filter pencarian Anda."
+              : "Belum ada pesanan yang masuk dalam sistem."
+          }
+        />
+      ) : (
         <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-xs">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="border-b border-slate-200/90 bg-slate-50/80 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            <table className="w-full text-left text-xs text-slate-600">
+              <thead className="border-b border-slate-100 bg-slate-50/75 text-[11px] font-bold uppercase tracking-wider text-slate-400">
                 <tr>
-                  <th className="px-5 py-3.5">Order #</th>
-                  <th className="px-5 py-3.5">Customer</th>
-                  <th className="px-5 py-3.5">Payment</th>
-                  <th className="px-5 py-3.5">Total Amount</th>
-                  <th className="px-5 py-3.5">Status</th>
-                  <th className="px-5 py-3.5">Date</th>
-                  <th className="px-5 py-3.5 text-right">Action</th>
+                  <th className="px-5 py-4">Nomor Pesanan</th>
+                  <th className="px-5 py-4">Customer</th>
+                  <th className="px-5 py-4">Item Produk</th>
+                  <th className="px-5 py-4">Total</th>
+                  <th className="px-5 py-4">Status</th>
+                  <th className="px-5 py-4">Tanggal</th>
+                  <th className="px-5 py-4 text-right">Aksi</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredOrders.map((o) => (
-                  <tr
-                    key={o.id}
-                    className="transition-colors hover:bg-slate-50/60"
-                  >
-                    {/* Order # */}
-                    <td className="px-5 py-4">
-                      <span className="font-mono font-bold text-slate-900">
-                        #{o.order_number || o.id.slice(0, 8)}
-                      </span>
-                    </td>
+              <tbody className="divide-y divide-slate-100 font-medium">
+                {filteredOrders.map((order) => {
+                  const items = order.items || [];
+                  const mainItem = items[0]?.name || "Template Order";
+                  const extraItems = items.length - 1;
 
-                    {/* Customer */}
-                    <td className="px-5 py-4">
-                      <div>
-                        <p className="font-bold text-slate-900">
-                          {o.customer?.full_name || "Guest / Buyer"}
-                        </p>
-                        <p className="text-[11px] text-slate-400">
-                          {o.customer?.email || "-"}
-                        </p>
-                      </div>
-                    </td>
+                  return (
+                    <tr
+                      key={order.id}
+                      className="transition-colors hover:bg-slate-50/50"
+                    >
+                      <td className="px-5 py-4 whitespace-nowrap">
+                        <Link
+                          href={`/admin/orders/${order.id}`}
+                          className="font-mono font-bold text-slate-900 hover:text-indigo-600"
+                        >
+                          {order.order_number}
+                        </Link>
+                      </td>
 
-                    {/* Payment Method */}
-                    <td className="px-5 py-4">
-                      <span className="inline-flex items-center gap-1 text-slate-600">
-                        <CreditCard className="h-3.5 w-3.5 text-slate-400" />
-                        <span>{o.payment_method || "Direct Gateway"}</span>
-                      </span>
-                    </td>
+                      <td className="px-5 py-4">
+                        <div className="max-w-[200px]">
+                          <p className="truncate font-bold text-slate-900">
+                            {order.customer?.full_name || "Pelanggan Nasla"}
+                          </p>
+                          <p className="truncate text-[11px] text-slate-400">
+                            {order.customer?.email || "-"}
+                          </p>
+                        </div>
+                      </td>
 
-                    {/* Total Amount */}
-                    <td className="px-5 py-4 font-bold text-slate-900">
-                      Rp {Number(o.total || 0).toLocaleString("id-ID")}
-                    </td>
+                      <td className="px-5 py-4">
+                        <div className="max-w-[220px]">
+                          <p className="truncate font-semibold text-slate-800">
+                            {mainItem}
+                          </p>
+                          {extraItems > 0 && (
+                            <p className="text-[10px] text-slate-400">
+                              +{extraItems} item lain
+                            </p>
+                          )}
+                        </div>
+                      </td>
 
-                    {/* Status */}
-                    <td className="px-5 py-4">
-                      <AdminStatusBadge status={o.status || "pending"} />
-                    </td>
+                      <td className="px-5 py-4 whitespace-nowrap font-bold text-slate-900">
+                        {formatIDR(order.total)}
+                      </td>
 
-                    {/* Date */}
-                    <td className="px-5 py-4 text-slate-500 text-[11px]">
-                      {o.created_at
-                        ? new Date(o.created_at).toLocaleDateString("id-ID", {
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                          })
-                        : "-"}
-                    </td>
+                      <td className="px-5 py-4 whitespace-nowrap">
+                        <AdminStatusBadge status={order.status} />
+                      </td>
 
-                    {/* Action */}
-                    <td className="px-5 py-4 text-right">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedOrder(o)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                      >
-                        <Eye className="h-3 w-3 text-slate-400" />
-                        <span>View</span>
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                      <td className="px-5 py-4 whitespace-nowrap text-slate-500">
+                        {new Date(order.created_at).toLocaleDateString("id-ID", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </td>
+
+                      <td className="px-5 py-4 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Link
+                            href={`/admin/orders/${order.id}`}
+                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                            title="Buka Halaman Detail"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                            <span>Detail</span>
+                          </Link>
+
+                          <button
+                            onClick={() => setSelectedOrder(order)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                            title="Quick Status Edit"
+                          >
+                            <Edit2 className="h-3.5 w-3.5" />
+                            <span>Status</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </div>
-      ) : (
-        <AdminEmptyState
-          title="No orders found"
-          description={
-            searchQuery || selectedStatus !== "all"
-              ? "No orders match your filter criteria. Try resetting your search."
-              : "No customer transactions have been recorded in the platform yet."
-          }
-        />
       )}
 
-      {/* Order Details & Status Update Modal */}
+      {/* Quick Status Modal */}
       {selectedOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-150">
-            <button
-              type="button"
-              onClick={() => setSelectedOrder(null)}
-              className="absolute top-4 right-4 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-            >
-              <X className="h-4 w-4" />
-            </button>
-
-            <div className="border-b border-slate-100 pb-4">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                Order Details
-              </span>
-              <div className="mt-1 flex items-center gap-2">
-                <h3 className="text-lg font-black text-slate-900">
-                  #{selectedOrder.order_number || selectedOrder.id.slice(0, 8)}
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Update Status Pesanan
+                </span>
+                <h3 className="font-mono text-base font-black text-slate-900">
+                  {selectedOrder.order_number}
                 </h3>
-                <AdminStatusBadge status={selectedOrder.status} />
               </div>
+              <button
+                onClick={() => setSelectedOrder(null)}
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
 
-            <div className="mt-4 space-y-4 text-xs">
-              {/* Customer Info */}
-              <div className="rounded-xl bg-slate-50 p-3.5 border border-slate-100 space-y-1">
-                <p className="font-bold text-slate-400 uppercase text-[10px]">
+            <form onSubmit={handleStatusSubmit} className="mt-5 space-y-4">
+              <input type="hidden" name="id" value={selectedOrder.id} />
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700">
                   Customer
+                </label>
+                <p className="mt-1 text-xs text-slate-600">
+                  {selectedOrder.customer?.full_name || "Pelanggan"} (
+                  {selectedOrder.customer?.email || "-"})
                 </p>
-                <p className="font-bold text-slate-900">
-                  {selectedOrder.customer?.full_name || "Guest Account"}
-                </p>
-                <p className="text-slate-500">{selectedOrder.customer?.email}</p>
-                {selectedOrder.customer?.company && (
-                  <p className="text-slate-500">
-                    Company: {selectedOrder.customer.company}
-                  </p>
-                )}
               </div>
 
-              {/* Order Items */}
-              {selectedOrder.items && selectedOrder.items.length > 0 && (
-                <div className="space-y-2">
-                  <p className="font-bold text-slate-400 uppercase text-[10px]">
-                    Items
-                  </p>
-                  <div className="divide-y divide-slate-100 rounded-xl border border-slate-100 bg-slate-50/50 p-2">
-                    {selectedOrder.items.map((item) => (
-                      <div
-                        key={item.id}
-                        className="flex items-center justify-between py-2 text-xs"
-                      >
-                        <div className="flex items-center gap-2">
-                          <Package className="h-3.5 w-3.5 text-slate-400" />
-                          <span className="font-bold text-slate-800">
-                            {item.title}
-                          </span>
-                          <span className="text-[10px] text-slate-400">
-                            x{item.quantity}
-                          </span>
-                        </div>
-                        <span className="font-bold text-slate-900">
-                          Rp {Number(item.price).toLocaleString("id-ID")}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Price Calculation */}
-              <div className="flex justify-between items-center rounded-xl bg-slate-900 text-white p-3.5">
-                <span className="font-bold text-xs uppercase tracking-wider text-slate-300">
-                  Total Settlement
-                </span>
-                <span className="text-base font-black">
-                  Rp {Number(selectedOrder.total || 0).toLocaleString("id-ID")}
-                </span>
+              <div>
+                <label className="block text-xs font-bold text-slate-700">
+                  Status Operasional
+                </label>
+                <select
+                  name="status"
+                  defaultValue={selectedOrder.status}
+                  className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs font-semibold text-slate-900 focus:border-slate-400 focus:bg-white focus:outline-hidden"
+                >
+                  <option value="pending">Pending</option>
+                  <option value="awaiting_payment">Awaiting Payment</option>
+                  <option value="paid">Paid</option>
+                  <option value="processing">Processing</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                  <option value="refunded">Refunded</option>
+                </select>
+                <p className="mt-1 text-[11px] text-slate-400">
+                  Pilih status yang sesuai dengan alur proses pesanan.
+                </p>
               </div>
 
-              {/* Status Update Form */}
-              <form
-                onSubmit={handleStatusSubmit}
-                className="mt-4 border-t border-slate-100 pt-4 space-y-3"
-              >
-                <input type="hidden" name="id" value={selectedOrder.id} />
+              <div>
+                <label className="block text-xs font-bold text-slate-700">
+                  Catatan Admin (Opsional)
+                </label>
+                <textarea
+                  name="notes"
+                  rows={3}
+                  defaultValue={selectedOrder.notes || ""}
+                  placeholder="Tambahkan catatan internal atau instruksi..."
+                  className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:bg-white focus:outline-hidden"
+                />
+              </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700">
-                    Update Order Status
-                  </label>
-                  <select
-                    name="status"
-                    defaultValue={selectedOrder.status || "pending"}
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-900 focus:outline-hidden"
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="paid">Paid</option>
-                    <option value="processing">Processing</option>
-                    <option value="completed">Completed</option>
-                    <option value="cancelled">Cancelled</option>
-                    <option value="refunded">Refunded</option>
-                  </select>
-                </div>
+              <div className="mt-6 flex justify-between border-t border-slate-100 pt-4">
+                <Link
+                  href={`/admin/orders/${selectedOrder.id}`}
+                  className="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-700"
+                >
+                  <span>Buka Halaman Lengkap</span>
+                  <ExternalLink className="h-3 w-3" />
+                </Link>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700">
-                    Admin Notes / Transaction Ref
-                  </label>
-                  <input
-                    type="text"
-                    name="notes"
-                    defaultValue={selectedOrder.notes || ""}
-                    placeholder="Internal reference notes..."
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 focus:outline-hidden"
-                  />
-                </div>
-
-                <div className="flex justify-end gap-2 pt-2">
+                <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={() => setSelectedOrder(null)}
-                    className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                    className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
                   >
-                    Close
+                    Batal
                   </button>
                   <button
                     type="submit"
                     disabled={isUpdating}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-slate-800 disabled:opacity-50"
+                    className="btn btn-primary px-4 py-2 text-xs font-bold disabled:opacity-50"
                   >
-                    {isUpdating ? "Saving..." : "Update Status"}
+                    {isUpdating ? "Menyimpan..." : "Simpan Status"}
                   </button>
                 </div>
-              </form>
-            </div>
+              </div>
+            </form>
           </div>
         </div>
       )}
